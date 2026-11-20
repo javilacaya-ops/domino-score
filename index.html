@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1e3a5f">
+<title>Dominó Score</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+  :root {
+    --bg: #f4f1ea;
+    --card: #ffffff;
+    --text: #1c1c1c;
+    --muted: #6b6b63;
+    --border: #dedad0;
+    --team-a: #1e3a5f;
+    --team-a-soft: #e7edf3;
+    --team-b: #b4232a;
+    --team-b-soft: #f6e6e4;
+    --accent: #1e3a5f;
+    --danger: #b4232a;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100%;
+  }
+  #app {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    display: flex;
+    flex-direction: column;
+  }
+  .screen { display: none; flex-direction: column; flex: 1; padding: 20px 16px 28px; }
+  .screen.active { display: flex; }
+
+  h1 { font-size: 22px; margin: 4px 0 2px; text-align: center; }
+  .subtitle { text-align: center; color: var(--muted); font-size: 13px; margin: 0 0 20px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .card.team-a { border-left: 5px solid var(--team-a); }
+  .card.team-b { border-left: 5px solid var(--team-b); }
+
+  label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin: 10px 0 4px; text-transform: uppercase; letter-spacing: .03em; }
+  label:first-child { margin-top: 0; }
+  input[type="text"], input[type="number"], select {
+    width: 100%;
+    font-size: 16px;
+    padding: 11px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text);
+    font-family: inherit;
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .goal-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .goal-btn {
+    padding: 12px 0;
+    text-align: center;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: #fff;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--text);
+  }
+  .goal-btn.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .starter-list { display: flex; flex-direction: column; gap: 8px; }
+  .starter-opt {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 12px; border-radius: 10px; border: 1px solid var(--border); background: #fff;
+    font-size: 15px;
+  }
+  .starter-opt.selected { border-color: var(--accent); background: var(--team-a-soft); }
+  .starter-opt input { width: 18px; height: 18px; accent-color: var(--accent); margin: 0; }
+
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 15px 0;
+    border-radius: 12px;
+    border: none;
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--accent);
+    margin-top: 6px;
+  }
+  .btn:active { opacity: .85; }
+  .btn.secondary { background: #fff; color: var(--text); border: 1px solid var(--border); }
+  .btn.danger { background: var(--danger); }
+  .btn.small { padding: 10px 0; font-size: 14px; }
+  .btn-row { display: flex; gap: 10px; }
+  .btn-row .btn { margin-top: 0; }
+
+  /* --- Game screen --- */
+  .game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .game-title { font-size: 15px; font-weight: 700; color: var(--muted); }
+  .icon-btn {
+    border: 1px solid var(--border); background: #fff; border-radius: 10px;
+    padding: 7px 10px; font-size: 13px; font-weight: 600; color: var(--text);
+  }
+
+  .scoreboard { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 14px; }
+  .team-box { border-radius: var(--radius); padding: 14px 10px; text-align: center; }
+  .team-box.a { background: var(--team-a-soft); }
+  .team-box.b { background: var(--team-b-soft); }
+  .team-name { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; margin-bottom: 2px; }
+  .team-box.a .team-name { color: var(--team-a); }
+  .team-box.b .team-name { color: var(--team-b); }
+  .team-total { font-size: 34px; font-weight: 800; line-height: 1.1; }
+  .team-goal { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .progress-track { height: 6px; border-radius: 4px; background: rgba(0,0,0,.08); margin-top: 8px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 4px; }
+  .team-box.a .progress-fill { background: var(--team-a); }
+  .team-box.b .progress-fill { background: var(--team-b); }
+
+  .starter-banner {
+    text-align: center; font-size: 14px; background: #fff; border: 1px dashed var(--border);
+    border-radius: 12px; padding: 9px 10px; margin-bottom: 14px; color: var(--text);
+  }
+  .starter-banner strong { color: var(--accent); }
+
+  .entry-card { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .entry-field label { margin-top: 0; text-align: center; }
+  .entry-field input { text-align: center; font-size: 22px; font-weight: 700; padding: 12px 8px; }
+
+  .history-wrap { flex: 1; display: flex; flex-direction: column; min-height: 0; margin-top: 4px; }
+  .history-head { display: grid; grid-template-columns: 34px 1fr 1fr; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; padding: 0 4px 6px; }
+  .history-head span:nth-child(2) { text-align: center; }
+  .history-head span:nth-child(3) { text-align: center; }
+  .history-list { flex: 1; overflow-y: auto; border-radius: var(--radius); background: var(--card); border: 1px solid var(--border); }
+  .history-row { display: grid; grid-template-columns: 34px 1fr 1fr; align-items: center; padding: 10px 4px; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .history-row:last-child { border-bottom: none; }
+  .history-row .num { text-align: center; color: var(--muted); font-size: 12px; }
+  .history-cell { text-align: center; }
+  .history-cell .pts { font-weight: 700; }
+  .history-cell .tot { font-size: 11px; color: var(--muted); }
+  .history-row.winner-row { background: #fdf6e3; }
+  .empty-hist { text-align: center; color: var(--muted); font-size: 13px; padding: 24px 10px; }
+
+  .footer-actions { display: flex; gap: 10px; margin-top: 12px; }
+  .footer-actions .btn { flex: 1; margin-top: 0; }
+
+  /* --- Winner overlay --- */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(20,20,20,.55);
+    display: none; align-items: center; justify-content: center; padding: 24px; z-index: 50;
+  }
+  .overlay.active { display: flex; }
+  .overlay-card {
+    background: #fff; border-radius: 20px; padding: 28px 22px; text-align: center; max-width: 340px; width: 100%;
+  }
+  .overlay-card .trophy { font-size: 46px; margin-bottom: 6px; }
+  .overlay-card h2 { margin: 0 0 6px; font-size: 20px; }
+  .overlay-card p { margin: 0 0 20px; color: var(--muted); font-size: 14px; }
+
+  .hint { font-size: 12px; color: var(--muted); text-align: center; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ SETUP SCREEN ============ -->
+  <section id="setup" class="screen active">
+    <h1>🁰 Dominó Score</h1>
+    <p class="subtitle">Configura la partida y arranca a jugar</p>
+
+    <div class="card team-a">
+      <label for="teamAName">Nombre del equipo 1</label>
+      <input type="text" id="teamAName" placeholder="Equipo 1" maxlength="24">
+      <label for="playerA1">Jugador 1</label>
+      <input type="text" id="playerA1" placeholder="Jugador 1" maxlength="20">
+      <label for="playerA2">Jugador 2 (compañero)</label>
+      <input type="text" id="playerA2" placeholder="Jugador 2" maxlength="20">
+    </div>
+
+    <div class="card team-b">
+      <label for="teamBName">Nombre del equipo 2</label>
+      <input type="text" id="teamBName" placeholder="Equipo 2" maxlength="24">
+      <label for="playerB1">Jugador 1</label>
+      <input type="text" id="playerB1" placeholder="Jugador 3" maxlength="20">
+      <label for="playerB2">Jugador 2 (compañero)</label>
+      <input type="text" id="playerB2" placeholder="Jugador 4" maxlength="20">
+    </div>
+
+    <div class="card">
+      <label>¿Quién tiene la salida inicial?</label>
+      <div class="starter-list" id="starterList"></div>
+    </div>
+
+    <div class="card">
+      <label>Puntos para ganar</label>
+      <div class="goal-row" id="goalRow">
+        <div class="goal-btn" data-goal="50">50</div>
+        <div class="goal-btn selected" data-goal="100">100</div>
+        <div class="goal-btn" data-goal="150">150</div>
+        <div class="goal-btn" data-goal="200">200</div>
+      </div>
+    </div>
+
+    <button class="btn" id="startBtn">Comenzar partida</button>
+  </section>
+
+  <!-- ============ GAME SCREEN ============ -->
+  <section id="game" class="screen">
+    <div class="game-header">
+      <span class="game-title" id="gameGoalLabel">Meta: 100 pts</span>
+      <button class="icon-btn" id="newGameBtn">Nueva partida</button>
+    </div>
+
+    <div class="scoreboard">
+      <div class="team-box a">
+        <div class="team-name" id="scoreNameA">Equipo 1</div>
+        <div class="team-total" id="scoreTotalA">0</div>
+        <div class="team-goal" id="scoreGoalA">de 100</div>
+        <div class="progress-track"><div class="progress-fill" id="progressA" style="width:0%"></div></div>
+      </div>
+      <div class="team-box b">
+        <div class="team-name" id="scoreNameB">Equipo 2</div>
+        <div class="team-total" id="scoreTotalB">0</div>
+        <div class="team-goal" id="scoreGoalB">de 100</div>
+        <div class="progress-track"><div class="progress-fill" id="progressB" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <div class="starter-banner">Sale: <strong id="starterName">—</strong></div>
+
+    <div class="card" style="margin-bottom:10px;">
+      <div class="entry-card">
+        <div class="entry-field">
+          <label id="entryLabelA">Equipo 1</label>
+          <input type="number" id="inputA" inputmode="numeric" min="0" placeholder="0">
+        </div>
+        <div class="entry-field">
+          <label id="entryLabelB">Equipo 2</label>
+          <input type="number" id="inputB" inputmode="numeric" min="0" placeholder="0">
+        </div>
+      </div>
+      <button class="btn" id="addRoundBtn">Agregar ronda</button>
+      <div class="hint" id="entryHint"></div>
+    </div>
+
+    <div class="history-wrap">
+      <div class="history-head">
+        <span>#</span>
+        <span id="histNameA">Equipo 1</span>
+        <span id="histNameB">Equipo 2</span>
+      </div>
+      <div class="history-list" id="historyList">
+        <div class="empty-hist">Aún no hay rondas cargadas</div>
+      </div>
+    </div>
+
+    <div class="footer-actions">
+      <button class="btn secondary small" id="undoBtn">Deshacer última ronda</button>
+    </div>
+  </section>
+
+</div>
+
+<!-- ============ WINNER OVERLAY ============ -->
+<div class="overlay" id="winOverlay">
+  <div class="overlay-card">
+    <div class="trophy">🏆</div>
+    <h2 id="winTitle">¡Ganó Equipo 1!</h2>
+    <p id="winSubtitle">100 puntos</p>
+    <button class="btn" id="winNewGameBtn">Jugar otra partida</button>
+    <button class="btn secondary" id="winKeepBtn" style="margin-top:8px;">Ver el marcador</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var STORAGE_KEY = 'domino_score_state_v1';
+
+  // Rotación fija de salida: Equipo A jugador1 -> Equipo B jugador1 -> Equipo A jugador2 -> Equipo B jugador2
+  var ROTATION = [
+    { team: 'A', player: 0 },
+    { team: 'B', player: 0 },
+    { team: 'A', player: 1 },
+    { team: 'B', player: 1 }
+  ];
+
+  var state = null;
+
+  var el = {};
+  [
+    'setup', 'game', 'teamAName', 'playerA1', 'playerA2', 'teamBName', 'playerB1', 'playerB2',
+    'starterList', 'goalRow', 'startBtn', 'gameGoalLabel', 'newGameBtn',
+    'scoreNameA', 'scoreTotalA', 'scoreGoalA', 'progressA',
+    'scoreNameB', 'scoreTotalB', 'scoreGoalB', 'progressB',
+    'starterName', 'entryLabelA', 'entryLabelB', 'inputA', 'inputB', 'addRoundBtn', 'entryHint',
+    'histNameA', 'histNameB', 'historyList', 'undoBtn',
+    'winOverlay', 'winTitle', 'winSubtitle', 'winNewGameBtn', 'winKeepBtn'
+  ].forEach(function (id) { el[id] = document.getElementById(id); });
+
+  var selectedGoal = 100;
+
+  function defaultState() {
+    return {
+      teamA: { name: 'Equipo 1', players: ['Jugador 1', 'Jugador 2'] },
+      teamB: { name: 'Equipo 2', players: ['Jugador 3', 'Jugador 4'] },
+      goal: 100,
+      starterIndex: 0,
+      rounds: [],
+      finished: false,
+      winner: null
+    };
+  }
+
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return null;
+  }
+
+  function showScreen(name) {
+    el.setup.classList.toggle('active', name === 'setup');
+    el.game.classList.toggle('active', name === 'game');
+  }
+
+  // --------- SETUP SCREEN ---------
+
+  function renderStarterOptions() {
+    var names = [
+      el.playerA1.value.trim() || el.playerA1.placeholder,
+      el.playerB1.value.trim() || el.playerB1.placeholder,
+      el.playerA2.value.trim() || el.playerA2.placeholder,
+      el.playerB2.value.trim() || el.playerB2.placeholder
+    ];
+    var current = el.starterList.getAttribute('data-selected') || '0';
+    var html = '';
+    for (var i = 0; i < 4; i++) {
+      var checked = String(i) === current ? 'checked' : '';
+      var selCls = String(i) === current ? ' selected' : '';
+      html += '<label class="starter-opt' + selCls + '">' +
+        '<input type="radio" name="starterPick" value="' + i + '" ' + checked + '>' +
+        '<span>' + escapeHtml(names[i]) + '</span></label>';
+    }
+    el.starterList.innerHTML = html;
+    el.starterList.setAttribute('data-selected', current);
+
+    Array.prototype.forEach.call(el.starterList.querySelectorAll('input'), function (radio) {
+      radio.addEventListener('change', function () {
+        el.starterList.setAttribute('data-selected', radio.value);
+        renderStarterOptions();
+      });
+    });
+  }
+
+  function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  [el.playerA1, el.playerA2, el.playerB1, el.playerB2].forEach(function (input) {
+    input.addEventListener('input', renderStarterOptions);
+  });
+
+  Array.prototype.forEach.call(el.goalRow.querySelectorAll('.goal-btn'), function (btn) {
+    btn.addEventListener('click', function () {
+      Array.prototype.forEach.call(el.goalRow.querySelectorAll('.goal-btn'), function (b) {
+        b.classList.remove('selected');
+      });
+      btn.classList.add('selected');
+      selectedGoal = parseInt(btn.getAttribute('data-goal'), 10);
+    });
+  });
+
+  el.startBtn.addEventListener('click', function () {
+    var teamAName = el.teamAName.value.trim() || el.teamAName.placeholder;
+    var teamBName = el.teamBName.value.trim() || el.teamBName.placeholder;
+    var a1 = el.playerA1.value.trim() || el.playerA1.placeholder;
+    var a2 = el.playerA2.value.trim() || el.playerA2.placeholder;
+    var b1 = el.playerB1.value.trim() || el.playerB1.placeholder;
+    var b2 = el.playerB2.value.trim() || el.playerB2.placeholder;
+    var starterChoice = parseInt(el.starterList.getAttribute('data-selected') || '0', 10);
+
+    // El orden de rotación fija es [A1, B1, A2, B2]; mapeamos la elección a ese índice.
+    var mapping = [0, 1, 2, 3];
+
+    state = defaultState();
+    state.teamA.name = teamAName;
+    state.teamA.players = [a1, a2];
+    state.teamB.name = teamBName;
+    state.teamB.players = [b1, b2];
+    state.goal = selectedGoal;
+    state.starterIndex = mapping[starterChoice];
+
+    save();
+    renderGame();
+    showScreen('game');
+  });
+
+  // --------- GAME SCREEN ---------
+
+  function currentStarterName() {
+    var slot = ROTATION[state.starterIndex % 4];
+    var team = slot.team === 'A' ? state.teamA : state.teamB;
+    return team.players[slot.player] + ' (' + team.name + ')';
+  }
+
+  function totals() {
+    var a = 0, b = 0;
+    state.rounds.forEach(function (r) { a += r.a; b += r.b; });
+    return { a: a, b: b };
+  }
+
+  function renderGame() {
+    el.gameGoalLabel.textContent = 'Meta: ' + state.goal + ' pts';
+    el.scoreNameA.textContent = state.teamA.name;
+    el.scoreNameB.textContent = state.teamB.name;
+    el.entryLabelA.textContent = state.teamA.name;
+    el.entryLabelB.textContent = state.teamB.name;
+    el.histNameA.textContent = state.teamA.name;
+    el.histNameB.textContent = state.teamB.name;
+    el.scoreGoalA.textContent = 'de ' + state.goal;
+    el.scoreGoalB.textContent = 'de ' + state.goal;
+
+    var t = totals();
+    el.scoreTotalA.textContent = t.a;
+    el.scoreTotalB.textContent = t.b;
+    el.progressA.style.width = Math.min(100, (t.a / state.goal) * 100) + '%';
+    el.progressB.style.width = Math.min(100, (t.b / state.goal) * 100) + '%';
+
+    el.starterName.textContent = state.finished ? '—' : currentStarterName();
+
+    renderHistory(t);
+
+    var disable = state.finished;
+    el.addRoundBtn.disabled = disable;
+    el.addRoundBtn.style.opacity = disable ? '.5' : '1';
+    el.entryHint.textContent = disable ? 'Partida terminada. Inicia una nueva para seguir jugando.' : '';
+
+    if (state.finished && state.winner) {
+      openWinOverlay();
+    } else {
+      closeWinOverlay();
+    }
+  }
+
+  function renderHistory(t) {
+    if (!state.rounds.length) {
+      el.historyList.innerHTML = '<div class="empty-hist">Aún no hay rondas cargadas</div>';
+      return;
+    }
+    var runA = 0, runB = 0;
+    var html = '';
+    state.rounds.forEach(function (r, idx) {
+      runA += r.a;
+      runB += r.b;
+      var isLast = idx === state.rounds.length - 1;
+      var winnerRow = (isLast && state.finished) ? ' winner-row' : '';
+      html += '<div class="history-row' + winnerRow + '">' +
+        '<span class="num">' + (idx + 1) + '</span>' +
+        '<span class="history-cell"><span class="pts">+' + r.a + '</span><br><span class="tot">Total ' + runA + '</span></span>' +
+        '<span class="history-cell"><span class="pts">+' + r.b + '</span><br><span class="tot">Total ' + runB + '</span></span>' +
+        '</div>';
+    });
+    el.historyList.innerHTML = html;
+    el.historyList.scrollTop = el.historyList.scrollHeight;
+  }
+
+  function addRound() {
+    if (state.finished) return;
+    var a = parseInt(el.inputA.value, 10);
+    var b = parseInt(el.inputB.value, 10);
+    if (isNaN(a)) a = 0;
+    if (isNaN(b)) b = 0;
+    if (a < 0 || b < 0) {
+      el.entryHint.textContent = 'Los puntos no pueden ser negativos.';
+      return;
+    }
+    if (a === 0 && b === 0) {
+      el.entryHint.textContent = 'Ingresa los puntos de al menos un equipo.';
+      return;
+    }
+
+    state.rounds.push({ a: a, b: b });
+
+    var t = totals();
+    var aWins = t.a >= state.goal;
+    var bWins = t.b >= state.goal;
+
+    if (aWins && bWins) {
+      if (t.a > t.b) { state.finished = true; state.winner = 'A'; }
+      else if (t.b > t.a) { state.finished = true; state.winner = 'B'; }
+      else { el.entryHint.textContent = 'Empate en la meta: sigan jugando hasta romper el empate.'; }
+    } else if (aWins) {
+      state.finished = true; state.winner = 'A';
+    } else if (bWins) {
+      state.finished = true; state.winner = 'B';
+    }
+
+    if (!state.finished) {
+      state.starterIndex = (state.starterIndex + 1) % 4;
+    }
+
+    el.inputA.value = '';
+    el.inputB.value = '';
+    save();
+    renderGame();
+  }
+
+  function undoRound() {
+    if (!state.rounds.length) return;
+    state.rounds.pop();
+    if (state.finished) {
+      state.finished = false;
+      state.winner = null;
+    } else {
+      state.starterIndex = (state.starterIndex + 3) % 4;
+    }
+    save();
+    renderGame();
+  }
+
+  function openWinOverlay() {
+    var t = totals();
+    var winnerTeam = state.winner === 'A' ? state.teamA : state.teamB;
+    var winnerTotal = state.winner === 'A' ? t.a : t.b;
+    el.winTitle.textContent = '¡Ganó ' + winnerTeam.name + '!';
+    el.winSubtitle.textContent = winnerTotal + ' puntos';
+    el.winOverlay.classList.add('active');
+  }
+
+  function closeWinOverlay() {
+    el.winOverlay.classList.remove('active');
+  }
+
+  el.addRoundBtn.addEventListener('click', addRound);
+  el.undoBtn.addEventListener('click', undoRound);
+  [el.inputA, el.inputB].forEach(function (input) {
+    input.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') addRound();
+    });
+  });
+
+  function resetToSetup() {
+    if (state && state.rounds.length && !state.finished) {
+      if (!confirm('¿Terminar esta partida y empezar una nueva? Se perderá el marcador actual.')) return;
+    }
+    state = null;
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    closeWinOverlay();
+    showScreen('setup');
+  }
+
+  el.newGameBtn.addEventListener('click', resetToSetup);
+  el.winNewGameBtn.addEventListener('click', resetToSetup);
+  el.winKeepBtn.addEventListener('click', closeWinOverlay);
+
+  // --------- INIT ---------
+  renderStarterOptions();
+
+  var saved = load();
+  if (saved && saved.teamA && saved.rounds) {
+    state = saved;
+    renderGame();
+    showScreen('game');
+  } else {
+    showScreen('setup');
+  }
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function () {});
+    });
+  }
+})();
+</script>
+</body>
+</html>

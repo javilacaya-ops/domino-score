@@ -1,0 +1,14 @@
+{
+  "name": "Dominó Score",
+  "short_name": "Dominó",
+  "description": "Anotador de puntuación para juegos de dominó por parejas",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f1ea",
+  "theme_color": "#1e3a5f",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
